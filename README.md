@@ -100,6 +100,31 @@ Environment variables use `__` in App Service and map to the shown `:` paths.
 
 Non-secret ingestion/retrieval values are in `appsettings.json`. Never populate source files with credentials.
 
+### Generate an appsettings template
+
+The repository includes the PowerShell sample
+[`samples/New-SmartAssistAppSettings.ps1`](samples/New-SmartAssistAppSettings.ps1).
+After cloning or pulling the branch that contains this sample, run the following
+command from the repository root:
+
+```powershell
+./samples/New-SmartAssistAppSettings.ps1
+```
+
+By default, the script creates `appsettings.json` in the current directory. To
+write the template directly to the Web project, provide an output path:
+
+```powershell
+./samples/New-SmartAssistAppSettings.ps1 `
+    -OutputPath ./src/CGSmartK.Web/appsettings.Local.json
+```
+
+The script refuses to replace an existing file unless `-Force` is specified.
+If the `samples` directory is absent after `git pull`, the commit or pull
+request containing the sample is not present on the branch you pulled; use
+`git branch --show-current` and `git log --all -- samples/New-SmartAssistAppSettings.ps1`
+to verify the checked-out branch and whether the commit is available locally.
+
 Blob Storage does **not** use a connection string. `Storage:AccountName` is used to build the standard Blob service endpoint, and `DefaultAzureCredential` authenticates the local Azure CLI identity in development or the Web App managed identity in Azure. The configured private container must already exist; the application deliberately uploads only blobs and does not attempt to create or modify the container on each upload. A Blob `403 AuthorizationPermissionMismatch` means the authenticated identity cannot perform a required blob data operation at the configured account/container; it is not repaired by adding an account key. Run `Test-AzureAccess.ps1` to check the configured setting names, the Web App identity, its inherited RBAC assignments, and separately labelled data-plane access for the current Azure CLI identity. The Web App identity requires **Storage Blob Data Contributor** at the storage account (or an inherited) scope, and role changes can require propagation time before retrying.
 
 ## Build, test, and deploy

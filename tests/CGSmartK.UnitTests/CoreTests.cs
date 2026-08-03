@@ -1,4 +1,4 @@
-using CGSmartK.Application;using CGSmartK.Domain;using FluentAssertions;using Moq;
+using CGSmartK.Application;using CGSmartK.Domain;using FluentAssertions;using Moq;using Xunit;
 namespace CGSmartK.UnitTests;
 public class CoreTests
 { [Fact]public async Task Pdf_validation_rejects_spoofed_file(){var bytes=new MemoryStream("not pdf"u8.ToArray());var act=()=>PdfValidator.ValidateAsync("bad.pdf","application/pdf",7,bytes,100,CancellationToken.None);await act.Should().ThrowAsync<ArgumentException>();}

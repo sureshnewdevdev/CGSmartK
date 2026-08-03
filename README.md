@@ -15,19 +15,70 @@ flowchart LR
 
 Clean Architecture projects are `src/CGSmartK.Domain` (rules), `Application` (use cases/contracts), `Infrastructure` (managed-identity Azure adapters, worker, MCP boundary), and `Web` (MVC/auth/UI). Tests under `tests/` cover core behavior, MVC protection, and dependency direction. See [architecture](docs/architecture.md).
 
-## Prerequisites and setup
+## Run the application locally
 
-Install .NET 8 SDK, PowerShell 7, and Azure CLI. On Windows/PowerShell:
+The application uses the existing Azure resources listed in [Azure inventory](docs/azure-resources.md). Your account must have access to those resources; the setup scripts only inspect and configure existing resources and do not create or delete anything.
 
-```powershell
-az login --tenant b24388d9-c6ca-4c64-a601-5edb6e666e1e
-az account set --subscription bae405f7-48fe-48ae-a393-b10c8205792d
-./scripts/Test-Prerequisites.ps1
-./scripts/Configure-LocalDevelopment.ps1
-dotnet run --project src/CGSmartK.Web
-```
+1. Install the required tools:
+   - [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+   - [PowerShell 7](https://learn.microsoft.com/powershell/scripting/install/installing-powershell)
+   - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
 
-`DefaultAzureCredential` uses Azure CLI developer credentials locally and the App Service system-assigned identity in Azure; no keys are supported. Development authentication creates `dev-employee`; add `?as=admin` to a URL for `dev-admin`. This handler is selected only in Development. Upload a synthetic PDF as admin, wait for Indexed, then ask a supported question. The demo fixture is not a company policy.
+2. Clone the repository and enter its directory:
+
+   ```bash
+   git clone <repository-url>
+   cd CGSmartK
+   ```
+
+3. Sign in to the required Azure tenant. Run this and the remaining commands from PowerShell 7 (`pwsh` on macOS or Linux):
+
+   ```powershell
+   az login --tenant b24388d9-c6ca-4c64-a601-5edb6e666e1e
+   ```
+
+4. Select the subscription that contains the existing SmartAssist resources:
+
+   ```powershell
+   az account set --subscription bae405f7-48fe-48ae-a393-b10c8205792d
+   ```
+
+5. Verify the required tools, Azure login, subscription, and read-only resource access:
+
+   ```powershell
+   ./scripts/Test-Prerequisites.ps1
+   ```
+
+6. Save the non-secret Azure endpoints and resource names in .NET user secrets:
+
+   ```powershell
+   ./scripts/Configure-LocalDevelopment.ps1
+   ```
+
+   The application uses `DefaultAzureCredential`, which picks up your Azure CLI login during local development. The script does not store access keys or tokens.
+
+7. Restore the NuGet packages:
+
+   ```powershell
+   dotnet restore CGSmartK.sln
+   ```
+
+8. Run the MVC web application:
+
+   ```powershell
+   dotnet run --project src/CGSmartK.Web/CGSmartK.Web.csproj
+   ```
+
+9. Open `https://localhost:51788` in a browser. If your browser does not trust the local HTTPS development certificate, run `dotnet dev-certs https --trust`, restart the application, and open the URL again. Alternatively, use `http://localhost:51789` for local development.
+
+10. Use the application:
+    - The default development identity is `dev-employee`.
+    - To use the Knowledge Administrator pages, open `https://localhost:51788/?as=admin` (or add `?as=admin` to another application URL).
+    - As an administrator, upload a synthetic PDF and wait until its status is **Indexed**. Then return to the assistant and ask a question supported by that PDF. The included demo fixture is test data, not company policy.
+
+11. Stop the application by pressing <kbd>Ctrl</kbd>+<kbd>C</kbd> in the terminal running it.
+
+Development authentication is enabled only when `ASPNETCORE_ENVIRONMENT` is `Development`, as set by the project's launch profile. Production authentication fails closed if App Service Authentication does not provide a principal.
 
 ## Configuration contract
 

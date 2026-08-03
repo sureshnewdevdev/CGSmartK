@@ -66,3 +66,12 @@ public sealed class AssistantService(IEmbeddingService embeddings, IKnowledgeInd
     }
     private static string Hash(string value)=>Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)))[..12];
 }
+
+// Ensure that the IIngestionChannel interface is defined and included in the project.  
+// If it is part of another namespace or assembly, add the appropriate using directive or reference.  
+// Below is an example definition for IIngestionChannel based on its usage in the KnowledgeService class.  
+
+public interface IIngestionChannel
+{
+    Task EnqueueAsync(Guid documentId, CancellationToken ct);
+}

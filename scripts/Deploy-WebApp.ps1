@@ -1,0 +1,6 @@
+# Builds, tests, publishes, then deploys only after an explicit typed confirmation. Creates/deletes no resources.
+[CmdletBinding()]param([switch]$ConfirmDeployment)
+Set-StrictMode -Version Latest;$ErrorActionPreference='Stop';if(-not $ConfirmDeployment){throw 'Deployment is opt-in. Re-run with -ConfirmDeployment after reviewing subscription and target.'}
+az account set --subscription bae405f7-48fe-48ae-a393-b10c8205792d;if($LASTEXITCODE -ne 0){throw 'Azure login/subscription selection failed.'}
+dotnet restore CGSmartK.sln;if($LASTEXITCODE -ne 0){throw 'Restore failed.'};dotnet build CGSmartK.sln -c Release --no-restore;if($LASTEXITCODE -ne 0){throw 'Build failed.'};dotnet test CGSmartK.sln -c Release --no-build;if($LASTEXITCODE -ne 0){throw 'Tests failed.'};dotnet publish src/CGSmartK.Web/CGSmartK.Web.csproj -c Release --no-build -o artifacts/publish;if($LASTEXITCODE -ne 0){throw 'Publish failed.'}
+Compress-Archive -Path artifacts/publish/* -DestinationPath artifacts/smartassist.zip -Force;az webapp deploy -g SmartApp -n web-smartapp-f59ee617 --src-path artifacts/smartassist.zip --type zip;if($LASTEXITCODE -ne 0){throw 'Web App deployment failed.'};Write-Host 'Deployment completed.'

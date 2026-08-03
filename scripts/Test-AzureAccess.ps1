@@ -1,0 +1,7 @@
+# Runs non-destructive management/data-plane diagnostics and maps common RBAC failures.
+[CmdletBinding()]param()
+Set-StrictMode -Version Latest;$ErrorActionPreference='Stop';az account set --subscription bae405f7-48fe-48ae-a393-b10c8205792d;if($LASTEXITCODE -ne 0){throw 'Azure login or subscription selection failed.'}
+$checks=@(@('Blob','az storage blob list --auth-mode login --account-name stsmartappf59ee617 --container-name knowledge-documents --num-results 1 --output none'),@('Search','az rest --method get --url https://srch-smartapp-f59ee617.search.windows.net/indexes?api-version=2024-07-01 --resource https://search.azure.com --output none'))
+foreach($check in $checks){$output=Invoke-Expression "$($check[1]) 2>&1";$code=$LASTEXITCODE;if($code -eq 0){Write-Host "$($check[0]): access verified"}elseif($output -match '403|AuthorizationPermissionMismatch|Forbidden'){Write-Warning "$($check[0]): permission denied. Verify the documented data-plane RBAC role and allow propagation time."}elseif($output -match '404|not found'){Write-Warning "$($check[0]): resource or data-plane object not found."}else{Write-Warning "$($check[0]): service unavailable or provisioning incomplete (exit $code)."}}
+# Read-only role inventory for the Web App identity.
+az role assignment list --assignee 41f3cdfc-208c-4f4a-8660-34eb21aa9390 --resource-group SmartApp --query '[].{role:roleDefinitionName,scope:scope}' -o table;if($LASTEXITCODE -ne 0){throw 'Could not inspect managed-identity role assignments.'}

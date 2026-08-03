@@ -427,3 +427,10 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# SmartAssist generated artifacts
+**/bin/
+**/obj/
+artifacts/
+TestResults/
+*.trx

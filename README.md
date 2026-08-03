@@ -102,24 +102,33 @@ Non-secret ingestion/retrieval values are in `appsettings.json`. Never populate 
 
 ### Generate an appsettings template
 
-The repository includes the PowerShell sample
-[`samples/New-SmartAssistAppSettings.ps1`](samples/New-SmartAssistAppSettings.ps1).
-After cloning or pulling the branch that contains this sample, run the following
-command from the repository root:
-
-```powershell
-./samples/New-SmartAssistAppSettings.ps1
-```
-
-By default, the script creates `appsettings.json` in the current directory. To
-write the template directly to the Web project, provide an output path:
+The repository includes
+[`samples/New-SmartAssistAppSettings.ps1`](samples/New-SmartAssistAppSettings.ps1),
+which accepts the real values for your existing Azure resources and writes the
+completed JSON file. Run it from the repository root and replace the example
+values on the right-hand side with your resource values:
 
 ```powershell
 ./samples/New-SmartAssistAppSettings.ps1 `
+    -AzureOpenAIEndpoint 'https://my-openai.openai.azure.com/' `
+    -ChatDeployment 'smartassist-chat' `
+    -EmbeddingDeployment 'smartassist-embedding' `
+    -EmbeddingDimensions 1536 `
+    -SearchEndpoint 'https://my-search.search.windows.net' `
+    -SearchIndexName 'smartassist-knowledge-index' `
+    -StorageAccountName 'mystorageaccount' `
+    -StorageContainerName 'knowledge-documents' `
+    -DocumentIntelligenceEndpoint 'https://my-doc-intelligence.cognitiveservices.azure.com/' `
+    -KeyVaultUri 'https://my-key-vault.vault.azure.net/' `
     -OutputPath ./src/CGSmartK.Web/appsettings.Local.json
 ```
 
-The script refuses to replace an existing file unless `-Force` is specified.
+The Azure resource values are required. Ingestion, retrieval, MCP, logging, and
+host parameters are optional and default to the values in the standard
+configuration; use `Get-Help ./samples/New-SmartAssistAppSettings.ps1 -Full`
+to see every parameter. The script accepts no secrets and continues to rely on
+`DefaultAzureCredential`. It refuses to replace an existing file unless
+`-Force` is specified.
 If the `samples` directory is absent after `git pull`, the commit or pull
 request containing the sample is not present on the branch you pulled; use
 `git branch --show-current` and `git log --all -- samples/New-SmartAssistAppSettings.ps1`

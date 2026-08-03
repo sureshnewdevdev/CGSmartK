@@ -27,7 +27,7 @@ public sealed class IngestionSettings { public int TargetTokens {get;set;}=800; 
 public sealed class RetrievalSettings { public int TopK {get;set;}=8; public double MinimumScore {get;set;}=.55; public int MaxPerDocument {get;set;}=3; }
 public sealed class McpOptions { public bool Enabled {get;set;} public string? Endpoint {get;set;} public string[] AllowedTools {get;set;}=[]; public int TimeoutSeconds {get;set;}=5; public bool SyntheticDemo {get;set;} }
 
-public sealed class IngestionChannel(int capacity) : IIngestionChannel { private readonly Channel<Guid> channel=Channel.CreateBounded<Guid>(new BoundedChannelOptions(capacity){FullMode=BoundedChannelFullMode.Wait,SingleReader=true}); public ValueTask EnqueueAsync(Guid documentId,CancellationToken ct)=>channel.Writer.WriteAsync(documentId,ct); public IAsyncEnumerable<Guid> ReadAllAsync(CancellationToken ct)=>channel.Reader.ReadAllAsync(ct); }
+public sealed class IngestionChannel(int capacity) : IIngestionChannel { private readonly Channel<Guid> channel=Channel.CreateBounded<Guid>(new BoundedChannelOptions(capacity){FullMode=BoundedChannelFullMode.Wait,SingleReader=true}); public ValueTask EnqueueAsync(Guid documentId,CancellationToken cancellationToken)=>channel.Writer.WriteAsync(documentId,cancellationToken); public IAsyncEnumerable<Guid> ReadAllAsync(CancellationToken cancellationToken)=>channel.Reader.ReadAllAsync(cancellationToken); }
 public sealed class BlobDocumentRepository(BlobContainerClient container) : IDocumentRepository
 {
     private const string MetadataPrefix="metadata/";

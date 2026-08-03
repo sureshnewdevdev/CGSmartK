@@ -24,7 +24,7 @@ public sealed class DevelopmentAuthenticationHandler(
         };
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
 
-        return Task.FromResult(AuthenticateResult.Success(new AuthenticateTicket(principal, SchemeName)));
+        return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
     }
 }
 
@@ -54,6 +54,6 @@ public sealed class EasyAuthAuthenticationHandler(
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role.Trim())));
         var principal = new ClaimsPrincipal(new ClaimsIdentity(claims, SchemeName));
 
-        return Task.FromResult(AuthenticateResult.Success(new AuthenticateTicket(principal, SchemeName)));
+        return Task.FromResult(AuthenticateResult.Success(new AuthenticationTicket(principal, SchemeName)));
     }
 }

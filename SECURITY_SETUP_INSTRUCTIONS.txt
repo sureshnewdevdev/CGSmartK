@@ -1,0 +1,82 @@
+SMARTASSIST AZURE SECURITY SETUP (STEP BY STEP)
+================================================
+
+Important
+---------
+This repository intentionally uses DefaultAzureCredential. Access keys and
+connection strings must not be added to appsettings.json or committed to source
+control. DefaultAzureCredential is the single authentication method used by the
+application for Azure OpenAI, Azure AI Search, Blob Storage, and Document
+Intelligence.
+
+Local development
+-----------------
+1. Install the .NET 8 SDK, Azure CLI, and PowerShell 7.
+
+2. Open src/CGSmartK.Web/appsettings.json.
+
+3. Replace each mock value beginning with YOUR- with the matching non-secret
+   Azure resource name, endpoint, deployment name, index name, or container
+   name. Do not paste an access key, token, or connection string into the file.
+
+4. Sign in with Azure CLI:
+
+   az login
+
+5. Select the subscription that contains the existing resources:
+
+   az account set --subscription "YOUR-SUBSCRIPTION-ID"
+
+6. Confirm that your signed-in identity has the required data-plane roles on
+   the existing resources. At minimum, it needs permission to read and write
+   blobs, query and update the search index, and call Azure OpenAI and Document
+   Intelligence. Ask the Azure owner to grant only the required roles.
+
+7. Restore, build, test, and run the application from the repository root:
+
+   dotnet restore CGSmartK.sln
+   dotnet build CGSmartK.sln --configuration Release --no-restore
+   dotnet test CGSmartK.sln --configuration Release --no-build
+   dotnet run --project src/CGSmartK.Web/CGSmartK.Web.csproj
+
+8. DefaultAzureCredential automatically uses the Azure CLI identity for local
+   development. No application secret is required.
+
+Azure App Service
+-----------------
+1. Enable the system-assigned managed identity on the existing Web App.
+
+2. Grant that managed identity the minimum required data-plane roles on the
+   existing Azure resources. Do not grant roles to the deployment user as a
+   substitute for the Web App identity.
+
+3. Configure the non-secret SmartAssist settings in App Service Configuration.
+   Use double underscores for nested settings. Example mock names:
+
+   SmartAssist__AzureOpenAI__Endpoint
+   SmartAssist__AzureOpenAI__ChatDeployment
+   SmartAssist__AzureOpenAI__EmbeddingDeployment
+   SmartAssist__Search__Endpoint
+   SmartAssist__Search__IndexName
+   SmartAssist__Storage__AccountName
+   SmartAssist__Storage__ContainerName
+   SmartAssist__DocumentIntelligence__Endpoint
+
+4. Replace their mock values with the real endpoints and resource names. Do not
+   configure storage connection strings or Azure service access keys.
+
+5. Deploy the already-tested application. In App Service,
+   DefaultAzureCredential automatically uses the Web App managed identity.
+
+6. Verify /health/live, /health/ready, authentication, an authorized search,
+   and an administrator upload. Live Azure tests are opt-in and must use only
+   existing resources.
+
+Troubleshooting
+---------------
+* A 401 or 403 normally means the active identity is missing a data-plane role,
+  the role assignment has not propagated, or the resource endpoint is wrong.
+* Never fix an authorization error by committing an access key or connection
+  string.
+* Production authentication is expected to fail closed when App Service
+  Authentication is absent or invalid.

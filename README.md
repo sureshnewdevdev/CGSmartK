@@ -100,6 +100,40 @@ Environment variables use `__` in App Service and map to the shown `:` paths.
 
 Non-secret ingestion/retrieval values are in `appsettings.json`. Never populate source files with credentials.
 
+### Generate an appsettings template
+
+The repository includes
+[`samples/New-SmartAssistAppSettings.ps1`](samples/New-SmartAssistAppSettings.ps1),
+which accepts the real values for your existing Azure resources and writes the
+completed JSON file. Run it from the repository root and replace the example
+values on the right-hand side with your resource values:
+
+```powershell
+./samples/New-SmartAssistAppSettings.ps1 `
+    -AzureOpenAIEndpoint 'https://my-openai.openai.azure.com/' `
+    -ChatDeployment 'smartassist-chat' `
+    -EmbeddingDeployment 'smartassist-embedding' `
+    -EmbeddingDimensions 1536 `
+    -SearchEndpoint 'https://my-search.search.windows.net' `
+    -SearchIndexName 'smartassist-knowledge-index' `
+    -StorageAccountName 'mystorageaccount' `
+    -StorageContainerName 'knowledge-documents' `
+    -DocumentIntelligenceEndpoint 'https://my-doc-intelligence.cognitiveservices.azure.com/' `
+    -KeyVaultUri 'https://my-key-vault.vault.azure.net/' `
+    -OutputPath ./src/CGSmartK.Web/appsettings.Local.json
+```
+
+The Azure resource values are required. Ingestion, retrieval, MCP, logging, and
+host parameters are optional and default to the values in the standard
+configuration; use `Get-Help ./samples/New-SmartAssistAppSettings.ps1 -Full`
+to see every parameter. The script accepts no secrets and continues to rely on
+`DefaultAzureCredential`. It refuses to replace an existing file unless
+`-Force` is specified.
+If the `samples` directory is absent after `git pull`, the commit or pull
+request containing the sample is not present on the branch you pulled; use
+`git branch --show-current` and `git log --all -- samples/New-SmartAssistAppSettings.ps1`
+to verify the checked-out branch and whether the commit is available locally.
+
 Blob Storage does **not** use a connection string. `Storage:AccountName` is used to build the standard Blob service endpoint, and `DefaultAzureCredential` authenticates the local Azure CLI identity in development or the Web App managed identity in Azure. The configured private container must already exist; the application deliberately uploads only blobs and does not attempt to create or modify the container on each upload. A Blob `403 AuthorizationPermissionMismatch` means the authenticated identity cannot perform a required blob data operation at the configured account/container; it is not repaired by adding an account key. Run `Test-AzureAccess.ps1` to check the configured setting names, the Web App identity, its inherited RBAC assignments, and separately labelled data-plane access for the current Azure CLI identity. The Web App identity requires **Storage Blob Data Contributor** at the storage account (or an inherited) scope, and role changes can require propagation time before retrying.
 
 ## Build, test, and deploy

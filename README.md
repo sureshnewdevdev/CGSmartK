@@ -100,7 +100,7 @@ Environment variables use `__` in App Service and map to the shown `:` paths.
 
 Non-secret ingestion/retrieval values are in `appsettings.json`. Never populate source files with credentials.
 
-Blob Storage does **not** use a connection string. `Storage:AccountName` is used to build the standard Blob service endpoint, and `DefaultAzureCredential` authenticates the local Azure CLI identity in development or the Web App managed identity in Azure. A Blob `403 AuthorizationPermissionMismatch` during upload means the authenticated identity cannot list/read/write blobs at the configured account/container; it is not repaired by adding an account key. Run `Test-AzureAccess.ps1` to check the configured setting names, the Web App identity, its inherited RBAC assignments, and separately labelled data-plane access for the current Azure CLI identity. The Web App identity requires **Storage Blob Data Contributor** at the storage account (or an inherited) scope, and role changes can require propagation time before retrying.
+Blob Storage does **not** use a connection string. `Storage:AccountName` is used to build the standard Blob service endpoint, and `DefaultAzureCredential` authenticates the local Azure CLI identity in development or the Web App managed identity in Azure. The configured private container must already exist; the application deliberately uploads only blobs and does not attempt to create or modify the container on each upload. A Blob `403 AuthorizationPermissionMismatch` means the authenticated identity cannot perform a required blob data operation at the configured account/container; it is not repaired by adding an account key. Run `Test-AzureAccess.ps1` to check the configured setting names, the Web App identity, its inherited RBAC assignments, and separately labelled data-plane access for the current Azure CLI identity. The Web App identity requires **Storage Blob Data Contributor** at the storage account (or an inherited) scope, and role changes can require propagation time before retrying.
 
 ## Build, test, and deploy
 
@@ -113,6 +113,8 @@ dotnet test CGSmartK.sln --configuration Release --no-build
 ```
 
 Deployment uses the caller's Azure login and existing Web App only. The script never creates resources. Live smoke operations are opt-in because they can touch data-plane objects.
+
+For a complete first deployment walkthrough—including managed identity, RBAC, App Service settings, production authentication, deployment validation, troubleshooting, and rollback—follow [Deploy to the existing Azure App Service](docs/app-service-deployment.md).
 
 ## Authentication and remaining owner setup
 

@@ -1,0 +1,5 @@
+# Existing Azure resources (safe inventory)
+
+Subscription `bae405f7-48fe-48ae-a393-b10c8205792d`, tenant `b24388d9-c6ca-4c64-a601-5edb6e666e1e`, resource group `SmartApp`, Central US. Existing resources: storage `stsmartappf59ee617` / private container `knowledge-documents`; Key Vault `kv-smartapp-f59ee617`; Search `srch-smartapp-f59ee617` / index `smartassist-knowledge-index`; Azure OpenAI `aoai-smartapp-f59ee617` with deployments `smartassist-chat` and `smartassist-embedding`; Document Intelligence `docint-smartapp-f59ee617`; Log Analytics `log-smartapp-f59ee617`; Application Insights `appi-smartapp-f59ee617`; plan `asp-smartapp-f59ee617`; Web App `web-smartapp-f59ee617`.
+
+Managed identity principal `41f3cdfc-208c-4f4a-8660-34eb21aa9390` needs Storage Blob Data Contributor, Key Vault Secrets User, Search Service Contributor, Search Index Data Contributor, Cognitive Services OpenAI User, and Cognitive Services User at the corresponding resource scopes. This repository neither creates nor deletes resources and contains no keys.

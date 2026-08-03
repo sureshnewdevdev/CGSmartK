@@ -100,6 +100,8 @@ Environment variables use `__` in App Service and map to the shown `:` paths.
 
 Non-secret ingestion/retrieval values are in `appsettings.json`. Never populate source files with credentials.
 
+Blob Storage does **not** use a connection string. `Storage:AccountName` is used to build the standard Blob service endpoint, and `DefaultAzureCredential` authenticates the local Azure CLI identity in development or the Web App managed identity in Azure. A Blob `403 AuthorizationPermissionMismatch` during upload means the authenticated identity cannot list/read/write blobs at the configured account/container; it is not repaired by adding an account key. Run `Test-AzureAccess.ps1` to check the configured setting names, the Web App identity, its inherited RBAC assignments, and separately labelled data-plane access for the current Azure CLI identity. The Web App identity requires **Storage Blob Data Contributor** at the storage account (or an inherited) scope, and role changes can require propagation time before retrying.
+
 ## Build, test, and deploy
 
 ```powershell

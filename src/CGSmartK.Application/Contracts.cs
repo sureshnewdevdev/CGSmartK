@@ -18,7 +18,6 @@ public interface IEmbeddingService { Task<float[]> EmbedAsync(string text, Cance
 public interface IKnowledgeIndex { Task EnsureAsync(CancellationToken ct); Task IndexAsync(IReadOnlyList<KnowledgeChunk> chunks, CancellationToken ct); Task DeleteDocumentAsync(Guid documentId, CancellationToken ct); Task<IReadOnlyList<RetrievedPassage>> SearchAsync(string query, float[] vector, UserAccessContext user, CancellationToken ct); }
 public interface IAnswerGenerator { Task<GeneratedAnswer> GenerateAsync(string question, IReadOnlyList<RetrievedPassage> context, WorkflowKind workflow, CancellationToken ct); }
 public interface IAuditStore { Task WriteAsync(AuditEvent audit, CancellationToken ct); Task<OperationStatus?> GetAsync(string correlationId, CancellationToken ct); }
-public interface IIngestionChannel { ValueTask EnqueueAsync(Guid documentId, CancellationToken ct); IAsyncEnumerable<Guid> ReadAllAsync(CancellationToken ct); }
 public interface IMcpToolClient { bool IsAvailable { get; } Task<string> InvokeAsync(string tool, IReadOnlyDictionary<string,string> input, UserAccessContext user, CancellationToken ct); }
 public interface IKnowledgeService { Task<KnowledgeDocument> UploadAsync(UploadDocumentCommand command, CancellationToken ct); Task ReindexAsync(Guid id, CancellationToken ct); Task DeleteAsync(Guid id, bool confirmed, CancellationToken ct); }
 public interface IAssistantService { Task<ChatResponse> AskAsync(ChatRequest request, CancellationToken ct); }

@@ -10,13 +10,13 @@ public sealed class KnowledgeRetrievalAgent(IEmbeddingService embeddings, IKnowl
 /// <summary>Deterministically selects a bounded workflow; it never starts an autonomous tool loop.</summary>
 public sealed class WorkflowOrchestrationAgent
 {
-    public WorkflowKind Route(string requested) => requested.Trim().ToLowerInvariant() switch
+    public static WorkflowKind Route(string requested) => requested.Trim().ToLowerInvariant() switch
     { "summary" or "summarize" => WorkflowKind.Summary, "draft" or "draftarticle" => WorkflowKind.DraftArticle, _ => WorkflowKind.Answer };
 }
 /// <summary>Checks generated citation identifiers and injection indicators before display.</summary>
 public sealed class PolicyComplianceAgent
 {
-    public ValidationResult Validate(GeneratedAnswer candidate, IReadOnlyList<RetrievedPassage> authorized) =>
+    public static ValidationResult Validate(GeneratedAnswer candidate, IReadOnlyList<RetrievedPassage> authorized) =>
         candidate.CitedChunkIds.Count > 0 && candidate.CitedChunkIds.All(id => authorized.Any(p => p.Chunk.Id == id)) && !PromptSecurity.LooksHostile(candidate.Text)
             ? new(true, null) : new(false, "The generated response was not grounded in authorized evidence.");
 }

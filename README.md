@@ -114,6 +114,8 @@ dotnet test CGSmartK.sln --configuration Release --no-build
 
 Deployment uses the caller's Azure login and existing Web App only. The script never creates resources. Live smoke operations are opt-in because they can touch data-plane objects.
 
+For a complete first deployment walkthrough—including managed identity, RBAC, App Service settings, production authentication, deployment validation, troubleshooting, and rollback—follow [Deploy to the existing Azure App Service](docs/app-service-deployment.md).
+
 ## Authentication and remaining owner setup
 
 Production fails closed unless App Service Authentication forwards a principal. The owner must create an Entra app registration, configure redirect URI `https://web-smartapp-f59ee617.azurewebsites.net/.auth/login/aad/callback`, expose/consent required scopes, assign Employee/KnowledgeAdministrator app roles or group mappings, configure App Service Authentication with tenant/client ID, require authentication, and preserve the Easy Auth principal headers. No client ID exists in this repository.

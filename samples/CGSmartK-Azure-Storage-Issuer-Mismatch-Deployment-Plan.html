@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CGSmartK Azure Storage Authentication Incident</title>
+  <style>
+    :root { color-scheme: light; font-family: Arial, Helvetica, sans-serif; line-height: 1.55; }
+    body { max-width: 960px; margin: 0 auto; padding: 2rem; color: #172033; background: #fff; }
+    h1, h2, h3 { color: #174a73; line-height: 1.2; }
+    h1 { margin-bottom: .25rem; }
+    .subtitle { margin-top: 0; color: #52606d; font-size: 1.15rem; }
+    .summary { padding: 1rem 1.25rem; border-left: .35rem solid #2878b5; background: #eef7fd; }
+    .warning { padding: 1rem 1.25rem; border-left: .35rem solid #b26a00; background: #fff8e8; }
+    code { padding: .1rem .3rem; border-radius: .2rem; background: #edf1f5; }
+    pre { overflow-x: auto; padding: 1rem; border-radius: .35rem; background: #172033; color: #f7f9fb; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: .65rem; border: 1px solid #cbd5df; text-align: left; vertical-align: top; }
+    th { background: #edf4f8; }
+    li + li { margin-top: .3rem; }
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #cbd5df; color: #52606d; }
+    @media print { body { max-width: none; padding: 0; } pre { white-space: pre-wrap; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>CGSmartK Azure Storage Authentication Incident</h1>
+    <p class="subtitle">Diagnosis, deployment scope, and remediation plan</p>
+    <p><strong>Prepared:</strong> 4 August 2026</p>
+  </header>
+
+  <main>
+    <section class="summary" aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Executive summary</h2>
+      <ul>
+        <li><strong>Failing service:</strong> Azure Blob Storage, while listing metadata blobs in the <code>knowledge-documents</code> container.</li>
+        <li><strong>Immediate cause:</strong> Storage rejected the bearer token because its issuer did not match the Microsoft Entra tenant expected by the Storage account.</li>
+        <li><strong>Deployment scope:</strong> Publish and deploy only <code>src/CGSmartK.Web/CGSmartK.Web.csproj</code> to <code>web-smartapp-f59ee617</code>.</li>
+        <li><strong>Worker scope:</strong> There is no independently deployed ingestion microservice. The ingestion worker runs inside the Web application.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>1. Which service is failing?</h2>
+      <p>The failing dependency is <strong>Azure Blob Storage</strong>. The request fails while <code>BlobDocumentRepository.FindByHashAsync</code> enumerates metadata blobs before a new PDF is saved.</p>
+      <ol>
+        <li><code>KnowledgeController.Upload</code> receives the PDF.</li>
+        <li><code>KnowledgeService.UploadAsync</code> validates it and checks for duplicates.</li>
+        <li><code>BlobDocumentRepository.FindByHashAsync</code> calls <code>BlobContainerClient.GetBlobsAsync</code>.</li>
+        <li>Azure Blob Storage returns HTTP 401 <code>InvalidAuthenticationInfo</code> with “Issuer validation failed. Issuer did not match.”</li>
+      </ol>
+      <p>The request has not yet reached Document Intelligence, Azure OpenAI embeddings, Azure AI Search, or Azure OpenAI chat. The supplied stack trace therefore does not show those services failing.</p>
+    </section>
+
+    <section>
+      <h2>2. What the issuer mismatch means</h2>
+      <p>The Storage challenge identifies tenant <code>8ac76c91-e7f1-41ff-a89c-3553b2da2c17</code> as the expected authorization tenant. The repository deployment documentation identifies <code>b24388d9-c6ca-4c64-a601-5edb6e666e1e</code> as the intended application subscription tenant. This strongly indicates that the token issuer and the tenant expected by the targeted Storage account are not aligned.</p>
+      <div class="warning">
+        <strong>This is not the same as ordinary missing RBAC.</strong> An issuer mismatch is an authentication failure. A correctly issued token without Blob data permissions normally produces an authorization failure such as HTTP 403 <code>AuthorizationPermissionMismatch</code>. Assigning another role cannot repair a token issued by the wrong tenant.
+      </div>
+      <h3>Likely causes</h3>
+      <ol>
+        <li><code>SmartAssist__Storage__AccountName</code> points to a different Storage account than intended.</li>
+        <li>The App Service and Storage account are associated with different tenants or subscriptions.</li>
+        <li>The Web App system-assigned managed identity is not the expected identity.</li>
+        <li><code>AZURE_*</code> App Service settings select an unintended service principal or user-assigned identity.</li>
+        <li>A deployment slot has settings that differ from production.</li>
+        <li>During local execution, <code>DefaultAzureCredential</code> selected an Azure CLI or developer credential signed into the wrong tenant.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>3. What must be deployed to App Service?</h2>
+      <p>Deploy only the Web project:</p>
+      <pre><code>src/CGSmartK.Web/CGSmartK.Web.csproj</code></pre>
+      <p>Publishing that project includes the Web, Infrastructure, Application, and Domain assemblies and their runtime dependencies. Do not deploy Domain, Application, Infrastructure, tests, scripts, or documentation as separate App Services.</p>
+      <p>The bounded ingestion queue and <code>IngestionWorker</code> execute in the Web App process. A separate worker App Service is not part of the current architecture.</p>
+
+      <h3>External Azure dependencies</h3>
+      <table>
+        <thead><tr><th>Dependency</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td>Azure Blob Storage</td><td>PDF and metadata persistence</td></tr>
+          <tr><td>Document Intelligence</td><td>PDF layout and text extraction</td></tr>
+          <tr><td>Azure OpenAI embeddings</td><td>Vectors for chunks and questions</td></tr>
+          <tr><td>Azure AI Search</td><td>Authorized hybrid and vector retrieval</td></tr>
+          <tr><td>Azure OpenAI chat</td><td>Grounded response generation</td></tr>
+          <tr><td>Key Vault</td><td>Configured secret store</td></tr>
+          <tr><td>Application Insights</td><td>Telemetry</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>4. Remediation and deployment plan</h2>
+      <h3>Phase 1 — Verify the Storage target</h3>
+      <ol>
+        <li>Inspect <code>SmartAssist__Storage__AccountName</code> and <code>SmartAssist__Storage__ContainerName</code> on <code>web-smartapp-f59ee617</code> and its active deployment slot.</li>
+        <li>Confirm the expected values are <code>stsmartappf59ee617</code> and <code>knowledge-documents</code>.</li>
+        <li>Confirm the configured account's Blob endpoint belongs to the intended resource in resource group <code>SmartApp</code>.</li>
+        <li>Do not add an account key or Storage connection string.</li>
+      </ol>
+
+      <h3>Phase 2 — Compare tenants and managed identities</h3>
+      <ol>
+        <li>Confirm subscription <code>bae405f7-48fe-48ae-a393-b10c8205792d</code> reports tenant <code>b24388d9-c6ca-4c64-a601-5edb6e666e1e</code>.</li>
+        <li>Inspect the Web App system-assigned identity. Confirm principal ID <code>41f3cdfc-208c-4f4a-8660-34eb21aa9390</code> and record its tenant ID.</li>
+        <li>Compare that tenant with the Storage challenge tenant <code>8ac76c91-e7f1-41ff-a89c-3553b2da2c17</code>.</li>
+        <li>If they differ, ask the Azure owner to align the Web App, identity, and Storage resource. Do not bypass tenant validation in application code.</li>
+      </ol>
+
+      <h3>Phase 3 — Check credential overrides</h3>
+      <ol>
+        <li>List App Service setting names beginning with <code>AZURE_</code>, without printing secret values.</li>
+        <li>Review <code>AZURE_TENANT_ID</code>, <code>AZURE_CLIENT_ID</code>, <code>AZURE_CLIENT_SECRET</code>, and <code>AZURE_CLIENT_CERTIFICATE_PATH</code> if present.</li>
+        <li>Confirm any selected user-assigned identity is intentional and belongs to the correct tenant.</li>
+        <li>Repeat the check for deployment slots.</li>
+      </ol>
+
+      <h3>Phase 4 — Verify Blob data-plane RBAC</h3>
+      <ol>
+        <li>After tenant alignment, verify that the exact Web App identity has <strong>Storage Blob Data Contributor</strong> on the Storage account, container, or an inherited scope.</li>
+        <li>Do not substitute Contributor or Storage Account Contributor; those management-plane roles do not grant Blob data access.</li>
+        <li>Allow time for propagation, restart the Web App, and run <code>scripts/Test-AzureAccess.ps1</code>. Azure CLI data-plane checks test the CLI user, not the Web App identity.</li>
+      </ol>
+
+      <h3>Phase 5 — Validate and deploy the application</h3>
+      <pre><code>dotnet restore CGSmartK.sln
+dotnet build CGSmartK.sln --configuration Release --no-restore
+dotnet test CGSmartK.sln --configuration Release --no-build --no-restore
+dotnet publish src/CGSmartK.Web/CGSmartK.Web.csproj \
+  --configuration Release --no-build --output artifacts/publish</code></pre>
+      <p>Deploy the published ZIP to <code>web-smartapp-f59ee617</code>. The repository-supported shortcut is:</p>
+      <pre><code>./scripts/Deploy-WebApp.ps1 -ConfirmDeployment</code></pre>
+
+      <h3>Phase 6 — Restart and validate</h3>
+      <ol>
+        <li>Restart <code>web-smartapp-f59ee617</code>.</li>
+        <li>Verify <code>/health/live</code>.</li>
+        <li>Verify Microsoft sign-in and application-role authorization.</li>
+        <li>Open <code>/Knowledge</code> as a <code>KnowledgeAdministrator</code>.</li>
+        <li>Upload only the supplied synthetic PDF and confirm Blob persistence succeeds.</li>
+        <li>Wait for status <code>Indexed</code>, ask a grounded question, and validate its citations.</li>
+        <li>If upload succeeds but ingestion fails, investigate Document Intelligence, Azure OpenAI embeddings, and Azure AI Search in that order.</li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>5. Operational decision tree</h2>
+      <ul>
+        <li><strong>Storage setting is wrong:</strong> correct the non-secret App Service setting and restart.</li>
+        <li><strong>Web App identity tenant differs:</strong> escalate to the Azure owner to align resource and identity configuration.</li>
+        <li><strong>Credential override selects the wrong identity:</strong> remove or correct it through approved App Service configuration.</li>
+        <li><strong>Issuer matches but Storage returns 403:</strong> correct Storage Blob Data Contributor assignment for the exact managed identity.</li>
+        <li><strong>Blob upload works but processing fails:</strong> examine the hosted ingestion worker and downstream dependencies in execution order.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>6. Guardrails</h2>
+      <ul>
+        <li>Continue using <code>DefaultAzureCredential</code>.</li>
+        <li>Do not add keys, tokens, secrets, Storage connection strings, raw prompts, document text, or generated answers to source control or logs.</li>
+        <li>Do not create or delete Azure resources from this repository.</li>
+        <li>Do not deploy when restore, Release build, or tests fail.</li>
+        <li>Do not enable anonymous production access to bypass authentication or authorization errors.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    <p><strong>Conclusion:</strong> Resolve the Azure Blob Storage tenant/issuer mismatch before treating the incident as RBAC or redeploying code. Once configuration is corrected, deploy only the CGSmartK Web project; its referenced libraries and hosted ingestion worker are included automatically.</p>
+  </footer>
+</body>
+</html>
